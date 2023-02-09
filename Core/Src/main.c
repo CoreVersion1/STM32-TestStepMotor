@@ -87,7 +87,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
   // 电机使能
   HAL_GPIO_WritePin(MC_EN_GPIO_Port, MC_EN_Pin, GPIO_PIN_RESET);
-  for (uint16_t i = 0; i < 200; i++)
+  // 电机转200步，如果是1.8°的电机在整步模式下则正好一圈
+  for (uint16_t i = 200; i; i--)
   {
     HAL_GPIO_WritePin(MC_STEP_GPIO_Port, MC_STEP_Pin, GPIO_PIN_SET);
     HAL_Delay(0);
@@ -118,12 +119,19 @@ int main(void)
           HAL_GPIO_WritePin(MC_STEP_GPIO_Port, MC_STEP_Pin, GPIO_PIN_RESET);
           HAL_Delay(0);
         }
-        // 关使能
-        HAL_GPIO_WritePin(MC_EN_GPIO_Port, MC_EN_Pin, GPIO_PIN_SET);
 
+        uint32_t tmp_cnt = 0;
         // 按键未抬起则保持不动，实现按一次只动一次
+        // 若保持1s，则关闭使能：即长按解锁
         while (HAL_GPIO_ReadPin(Buton_GPIO_Port, Buton_Pin) == GPIO_PIN_RESET)
         {
+          if (tmp_cnt++ > 1000)
+          {
+            // 关使能
+            HAL_GPIO_WritePin(MC_EN_GPIO_Port, MC_EN_Pin, GPIO_PIN_SET);
+          }
+
+          HAL_Delay(0);
         }
       }
     }
@@ -146,10 +154,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
    * in the RCC_OscInitTypeDef structure.
    */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState            = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_NONE;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -157,9 +165,10 @@ void SystemClock_Config(void)
 
   /** Initializes the CPU, AHB and APB buses clocks
    */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.ClockType =
+      RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
